@@ -1,0 +1,9 @@
+version: '3'
+services:
+  crawler-api:
+    build: ./crawler  # Dockerfile 경로
+    container_name: crawler_api_container
+    ports:
+      - "4040:5000"  
+    volumes:
+      - ./crawler:/app  # 로컬 디렉토리 마운트
