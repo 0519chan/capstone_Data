@@ -1,9 +1,28 @@
-version: '3'
+# version: '3'
+# services:
+#   crawler-api:
+#     build: ./crawler  # Dockerfile 경로
+#     container_name: crawler_api_container
+#     ports:
+#       - "4040:5000"  
+#     volumes:
+#       - ./crawler:/app  # 로컬 디렉토리 마운트
+
+version: '3.8'
 services:
-  crawler-api:
-    build: ./crawler  # Dockerfile 경로
-    container_name: crawler_api_container
+  jobkorea_crawler:
+    build: ./crawler
+    container_name: jobkorea_crawler
     ports:
-      - "4040:5000"  
-    volumes:
-      - ./crawler:/app  # 로컬 디렉토리 마운트
+      - "4040:5000"
+    environment:
+      - FLASK_APP=app.py  # app.py를 진입점으로 지정
+    command: ["python", "app.py"]
+  workent_crawler:
+    build: ./crawler
+    container_name: workent_crawler
+    ports:
+      - "4041:5000"
+    environment:
+      - FLASK_APP=app.py  # app.py를 진입점으로 지정
+    command: ["python", "app.py"]
