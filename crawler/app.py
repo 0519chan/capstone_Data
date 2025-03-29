@@ -1,8 +1,10 @@
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 from jobkorea_crwaler import crawl_job_data
 from workent_crawler import crawl_job_data
 
 app = Flask(__name__)
+CORS(app, origins="http://localhost:3000")  # 웹 페이지의 출처를 명시적으로 허용
 
 @app.route('/')  # 루트 경로 추가
 def home():
