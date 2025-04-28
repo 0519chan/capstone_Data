@@ -4,3 +4,6 @@ urllib3
 flask
 Flask-CORS
 httpx
+fastapi
+uvicorn
+

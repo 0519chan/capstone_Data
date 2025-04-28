@@ -1,111 +1,154 @@
+#FAST API
 import os
-import asyncio
-from flask import Flask, jsonify, request, render_template
-from flask_cors import CORS
 from jobkorea_crwaler import crawl_job_data_async
-from workent_crawler import crawl_job_data as worknet_crawler
-from saramin_crwaler import saramin_job_search, extract_job_info
-from top10 import crawl_top100_job_data_async 
+from workent_crawler import crawl_worknet_data
+from saramin_crwaler import saramin_job_search
+from top10_crwaler import crawl_top100_data_async
+from fastapi import FastAPI, Query
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+
+fast_app = FastAPI()
+
+origins = [
+    "http://localhost:3000",
+    # 필요한 다른 origin들을 추가하세요
+]
+
+fast_app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 SARAMIN_ACCESS_KEY = os.environ.get("SARAMIN_ACCESS_KEY")
 CRAWLER_TYPE = os.environ.get("CRAWLER_TYPE")
+def extract_saramin_job_info(item: dict) -> dict:
+        return {
+            "title": item.get("position", {}).get("title", "제목 없음"),
+            "company_name": item.get("company", {}).get("detail", {}).get("name", "회사명 없음"),
+            "location": item.get("position", {}).get("location", {}).get("name", "지역 없음").replace("&gt;", ">"),
+            "education_level": item.get("position", {}).get("required-education-level", {}).get("name", "학력 정보 없음"),
+            "career_level": item.get("position", {}).get("experience-level", {}).get("name", "경력 정보 없음"),
+            "salary": item.get("salary", {}).get("name", "급여 정보 없음"),
+            "expiration_date": item.get("expiration-date", "마감일 정보 없음"),
+            "detail_url": item.get("url", "링크 없음")
+        }
 
-app = Flask(__name__)
-CORS(app, origins="http://localhost:3000")
 
-# 메인 페이지 (프론트엔드 연결)
-@app.route('/')
-def home():
-    return render_template("index.html")
+@fast_app.get("/")
+async def home():
+    return JSONResponse(content={"message": "Welcome to the Jobkorea Crawler API"})
 
-# 잡코리아 API
-@app.route('/jobkorea_api/jobs', methods=['GET'])
-def get_jobkorea_jobs():
-    if CRAWLER_TYPE == 'jobkorea':
-        keyword = request.args.get('keyword', '데이터 분석')
-        jobs = asyncio.run(crawl_job_data_async(keyword))
-        return jsonify(jobs)
-    return jsonify({"message": "This service is not for Jobkorea."}), 400
+CRAWLER_TYPE =  ['jobkorea', 'worknet', 'top10', 'saramin']  # 실제 운영 값에 맞게 설정
 
-# 워크넷 API
-@app.route('/worknet_api/jobs', methods=['GET'])
-def get_worknet_jobs():
-    if CRAWLER_TYPE == 'worknet':
-        keyword = request.args.get('keyword', '데이터 분석')
-        jobs = worknet_crawler(keyword)
-        return jsonify(jobs)
-    return jsonify({"message": "This service is not for Worknet."}), 400
+@fast_app.get("/jobkorea_api/jobs")
+async def get_jobkorea_jobs(
+    keyword: str = Query("스포츠", description="검색 키워드"),
+    page: int = Query(4, description="페이지 번호"),
+    page_size: int = Query(20, description="한 페이지당 결과 수")
+):
+    if 'jobkorea' in CRAWLER_TYPE:
+        jobs = await crawl_job_data_async(keyword, page, page_size)  # 수정!!
+        return jobs
 
-# 사람인 API
-@app.route('/saramin_api/jobs', methods=['GET'])
-def get_saramin_jobs():
-    if CRAWLER_TYPE == 'saramin':
+    return JSONResponse(content={"message": "This service is not for Jobkorea."}, status_code=400)
+
+
+
+@fast_app.get("/worknet_api/jobs")
+async def get_workent_jobs(
+    keyword: str = Query("데이터 분석", description="검색할 키워드"),
+    page: int = Query(1, description="페이지번호"),
+    page_size: int = Query(20, description="한 페이지당 결과 수")
+    ):
+    if 'worknet' in CRAWLER_TYPE:
+        jobs = await crawl_worknet_data(keyword, page, page_size)
+        return jobs
+    return JSONResponse(content={"message": "This service is not for Worknet."}, status_code=400)
+
+@fast_app.get("/top100_api/jobs")
+async def get_top100():
+    if 'top10' in CRAWLER_TYPE:
+        data_list = await crawl_top100_data_async()
+        return data_list
+    return JSONResponse(content=data_list)
+
+@fast_app.get("/saramin_api/jobs")
+async def get_saramin():
+    if 'saramin' in CRAWLER_TYPE:
         if not SARAMIN_ACCESS_KEY:
-            return jsonify({"error": "SARAMIN_ACCESS_KEY가 설정되지 않았습니다."}), 500
-        keyword = request.args.get('keyword', '데이터 분석')
-        start = request.args.get('start', 1, type=int)
-        count = request.args.get('count', 20, type=int)
+            return JSONResponse(content={"error": "SARAMIN_ACCESS_KEY가 없습니다."}, status_code=500)
 
-        result = saramin_job_search(SARAMIN_ACCESS_KEY, keyword, start, count)
+        data_list = saramin_job_search(access_key=SARAMIN_ACCESS_KEY)
 
-        if result:
-            filtered_jobs = extract_job_info(result)
-            return jsonify(filtered_jobs)
-        else:
-            return jsonify({"error": "사람인 API 호출 실패"}), 500
-    return jsonify({"message": "This service is not for Saramin."}), 400
+        saramin_results = data_list.get('jobs', {}).get('job', [])
 
+        if not isinstance(saramin_results, list):
+            return JSONResponse(content={"error": "Saramin API 결과가 리스트가 아닙니다."}, status_code=500)
 
-@app.route('/top10_api/jobs', methods=['GET'])
-def get_top10_crawler():
-    if CRAWLER_TYPE == 'top10':
-        top10 = asyncio.run(crawl_job_data_async())
-        return jsonify(top10)
-    return jsonify({"message": "This service is not for top10."}), 400
+        filtered_results = [extract_saramin_job_info(item) for item in saramin_results]
+        return filtered_results
 
+    return JSONResponse(content={"message": "This service is not for Saramin."}, status_code=400)
 
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
-
+# @fast_app.on_event("startup")
+# async def load_cache_from_file():
+#     """서버 시작할 때 파일 캐시 읽어오기"""
+#     if os.path.exists(CACHE_FILE):
+#         with open(CACHE_FILE, "r", encoding="utf-8") as f:
+#             try:
+#                 cached_data = json.load(f)
+#                 cache['top100'] = (cached_data, time.time())
+#                 print("[INFO] Cache loaded from file successfully.")
+#             except Exception as e:
+#                 print(f"[ERROR] Failed to load cache file: {e}")
+#     else:
+#         print("[INFO] No cache file found. Will crawl on first request.")
 
 
 # import os
-# import threading
-# from flask import Flask, jsonify, request, render_template
-# from flask_cors import CORS
-# from jobkorea_crwaler import crawl_job_data as jobkorea_crawler
-# from workent_crawler import crawl_job_data as worknet_crawler
-# from saramin_crwaler import saramin_job_search, extract_job_info
+# import asyncio
+# from fastapi import FastAPI, Query
+# from fastapi.responses import JSONResponse
+# from fastapi.middleware.cors import CORSMiddleware
 
-# SARAMIN_ACCESS_KEY = os.environ.get("SARAMIN_ACCESS_KEY")
+# from jobkorea_crwaler import crawl_job_data_async as jobkorea_async
+# from workent_crawler import crawl_job_data_async as worknet_async
+# from top10_crwaler import crawl_top100_data_async
+
+# fast_app = FastAPI()
+
+# fast_app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],  # 운영 시 필요시 제한
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 # CRAWLER_TYPE = os.environ.get("CRAWLER_TYPE")
+# if not CRAWLER_TYPE:
+#     raise ValueError("CRAWLER_TYPE 환경변수가 설정되지 않았습니다.")
 
-# app = Flask(__name__)
-# CORS(app, origins="http://localhost:4040")
+# @fast_app.get("/")
+# async def home():
+#     return JSONResponse(content={"message": "Welcome to the Unified Job Crawler API"})
 
-# # 메인 페이지
-# @app.route('/')
-# def home():
-#     return render_template("index.html")
-
-# # 크롤링 API
-# @app.route('/crawl-now', methods=['GET'])
-# def crawl_now():
-#     keyword = request.args.get('keyword', '데이터 분석')
-#     if CRAWLER_TYPE == 'jobkorea':
-#         jobs = jobkorea_crawler(keyword)
-#     elif CRAWLER_TYPE == 'worknet':
-#         jobs = worknet_crawler(keyword)
-#     elif CRAWLER_TYPE == 'saramin':
-#         if not SARAMIN_ACCESS_KEY:
-#             return jsonify({"error": "SARAMIN_ACCESS_KEY가 설정되지 않았습니다."}), 500
-#         result = saramin_job_search(SARAMIN_ACCESS_KEY, keyword)
-#         jobs = extract_job_info(result)
+# @fast_app.get("/jobs")
+# async def get_jobs(
+#     keyword: str = Query("데이터 분석", description="검색할 키워드")
+# ):
+#     if CRAWLER_TYPE == "jobkorea":
+#         jobs = await jobkorea_async(keyword)
+#         return jobs
+#     elif CRAWLER_TYPE == "worknet":
+#         jobs = await worknet_async(keyword)
+#         return jobs
+#     elif CRAWLER_TYPE == "top10":
+#         jobs = await crawl_top100_data_async()
+#         return jobs
 #     else:
-#         return jsonify({"error": "지원하지 않는 크롤러 타입입니다."}), 400
-
-#     return jsonify(jobs)
-
-# if __name__ == '__main__':
-#     app.run(host='0.0.0.0', port=5000)
+#         return JSONResponse(content={"message": "Invalid crawler type."}, status_code=400)

@@ -39,24 +39,33 @@ services:
       - "4040:5000"
     environment:
       - CRAWLER_TYPE=jobkorea
-    command: ["python", "app.py"]
+    command: ["uvicorn", "app:fast_app", "--host", "0.0.0.0", "--port", "5000"]
 
-  workent_crawler:
+  worknet_crawler:
     build: ./crawler
     container_name: worknet_crawler
     ports:
       - "4041:5000"
     environment:
       - CRAWLER_TYPE=worknet
-    command: ["python", "app.py"]
+    command: ["uvicorn", "app:fast_app", "--host", "0.0.0.0", "--port", "5000"]
 
-  saramin_crawler:
+  top10_crawler:  
     build: ./crawler
-    container_name: saramin_crawler
+    container_name: top10_crawler  
     ports:
-      - "4042:5000"
+      - "4043:5000"
+    environment:
+      - CRAWLER_TYPE=top10
+    command: ["uvicorn", "app:fast_app", "--host", "0.0.0.0", "--port", "5000"]
+
+  saramin_crawler:  
+    build: ./crawler
+    container_name: saramin_crawler  
+    ports:
+      - "4044:5000"
     environment:
       - CRAWLER_TYPE=saramin
-      - FLASK_DEBUG=1
-      - SARAMIN_ACCESS_KEY="iE7rO0FJx5rPtiz6bVrHVGr4KEVBHYCWjSDAm2yWvKIUKB3GkG"
-    command: ["python", "app.py"]
+      -  SARAMIN_ACCESS_KEY=${SARAMIN_ACCESS_KEY}
+    command: ["uvicorn", "app:fast_app", "--host", "0.0.0.0", "--port", "5000"]
+

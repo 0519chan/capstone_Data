@@ -129,12 +129,12 @@ def extract_job_info(data):
     return job_list
 
 def main():
-    access_key = "iE7rO0FJx5rPtiz6bVrHVGr4KEVBHYCWjSDAm2yWvKIUKB3GkG"
+    #access_key = "iE7rO0FJx5rPtiz6bVrHVGr4KEVBHYCWjSDAm2yWvKIUKB3GkG"
     keyword = "데이터분석"
     start = 1
     count = 20
 
-    result = saramin_job_search(access_key, keyword, start, count)
+    result = saramin_job_search( keyword, start, count)
 
     if result:
         filtered_jobs = extract_job_info(result)
