@@ -74,7 +74,7 @@ import requests
 import json
 from urllib.parse import quote  # 추가
 
-def saramin_job_search(access_key, keyword="", start=1, count=20):
+def crawl_saramin_data(access_key, keyword="", start=1, count=20):
     """
     사람인 채용공고 API를 호출하는 함수 (수정 버전)
     """
@@ -134,7 +134,7 @@ def main():
     start = 1
     count = 20
 
-    result = saramin_job_search( keyword, start, count)
+    result = crawl_saramin_data( keyword, start, count)
 
     if result:
         filtered_jobs = extract_job_info(result)

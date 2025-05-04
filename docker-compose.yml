@@ -50,13 +50,14 @@ services:
       - CRAWLER_TYPE=worknet
     command: ["uvicorn", "app:fast_app", "--host", "0.0.0.0", "--port", "5000"]
 
-  top10_crawler:  
+  crawler:
     build: ./crawler
-    container_name: top10_crawler  
+    container_name: all_crawler
     ports:
-      - "4043:5000"
+      - "4042:5000"
     environment:
-      - CRAWLER_TYPE=top10
+      - CRAWLER_TYPE=jobkorea,worknet,saramin
+      - SARAMIN_ACCESS_KEY=${SARAMIN_ACCESS_KEY}
     command: ["uvicorn", "app:fast_app", "--host", "0.0.0.0", "--port", "5000"]
 
   saramin_crawler:  
@@ -66,6 +67,6 @@ services:
       - "4044:5000"
     environment:
       - CRAWLER_TYPE=saramin
-      -  SARAMIN_ACCESS_KEY=${SARAMIN_ACCESS_KEY}
+      - SARAMIN_ACCESS_KEY=${SARAMIN_ACCESS_KEY}
     command: ["uvicorn", "app:fast_app", "--host", "0.0.0.0", "--port", "5000"]
 

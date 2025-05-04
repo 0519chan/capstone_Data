@@ -153,12 +153,9 @@ HEADERS = {
     "Connection": "keep-alive"
 }
 
+# 모듈용 함수
 @app.get("/worknet/crawl")
-async def crawl_worknet_data(
-    keyword: str = Query('데이터분석', description="검색 키워드"),
-    page: int = Query(1, description="워크넷 페이지 번호 (1부터 시작)"),
-    page_size: int = Query(5, description="한 번에 가져올 개수")
-):
+async def crawl_worknet_data(keyword: str, page: int, page_size: int) -> list:
     now = time.time()
     cache_key = f"{keyword}_{page}"
 
@@ -167,8 +164,14 @@ async def crawl_worknet_data(
         if now - timestamp < CACHE_DURATION:
             start = (page - 1) * page_size % 20
             end = start + page_size
-            return JSONResponse(content=all_data[start:end])
-
+            return all_data[start:end]  # ✅ list로 반환
+    if cache_key in cache:
+        cache[cache_key] = (all_job_list, now)
+        if now - timestamp < CACHE_DURATION:
+            start = (page - 1) * page_size % 20
+            end = start + page_size
+            return all_job_list[start:end]
+        
     encoded_keyword = urllib.parse.quote(keyword)
     url = f"https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?startCount=1&topQuerySearchArea=all&searchYn=Y&listCount=20&keyword=&srcKeyword={encoded_keyword}&programMenuIdentification=EBG020000000000"
 
@@ -193,7 +196,7 @@ async def crawl_worknet_data(
 
     start = (page - 1) * page_size % 20
     end = start + page_size
-    return JSONResponse(content=all_job_list[start:end])
+    return all_job_list[start:end]
 
 async def safe_process_job(client, job, semaphore):
     async with semaphore:

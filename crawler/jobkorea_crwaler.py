@@ -38,7 +38,7 @@ async def crawl_job_data_async(
         if now - timestamp < CACHE_DURATION:
             start = (page - 1) * page_size % 20
             end = start + page_size
-            return JSONResponse(content=all_data[start:end])
+            return all_data[start:end]
 
     # URL 생성
     encoded_keyword = urllib.parse.quote(keyword)
@@ -64,7 +64,7 @@ async def crawl_job_data_async(
 
     start = (page - 1) * page_size % 20
     end = start + page_size
-    return JSONResponse(content=all_job_list[start:end])
+    return all_job_list[start:end]
 
 async def safe_process_job(client, job, semaphore):
     async with semaphore:
@@ -147,8 +147,6 @@ async def process_single_job(client, job):
     except Exception as e:
         print(f"Error processing job: {e}")
         return {"error": str(e)}
-
-
 
 
 
