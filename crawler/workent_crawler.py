@@ -292,64 +292,74 @@ async def process_single_job(client, job):
         print(f"Error processing job: {e}")
         return []
 
-# 워크넷 상세 페이지 크롤링
-async def crawl_worknet_detail(url: str) -> dict:
-    try:
-        async with httpx.AsyncClient(headers=HEADERS, timeout=10.0) as client:
-            response = await client.get(url, follow_redirects=False)
-            if response.status_code == 302:
-                return {
-                    "type": "error",
-                    "content": "워크넷 접속이 차단되었습니다. 브라우저 환경에서 접속해주세요."
-                }
+# # # 워크넷 상세 페이지 크롤링
+# async def crawl_worknet_detail(url: str) -> dict:
+#     try:
+#         async with httpx.AsyncClient(headers=HEADERS, timeout=10.0) as client:
+#             response = await client.get(url, follow_redirects=False)
+#             if response.status_code == 302:
+#                 return {
+#                     "type": "error",
+#                     "content": "워크넷 접속이 차단되었습니다. 브라우저 환경에서 접속해주세요."
+#                 }
 
-            soup = BeautifulSoup(response.text, "html.parser")
+#             soup = BeautifulSoup(response.text, "html.parser")
 
-            # iframe
-            iframe = soup.find("iframe")
-            if iframe and iframe.get("src"):
-                iframe_src = iframe["src"]
-                if not iframe_src.startswith("http"):
-                    iframe_src = "https://www.work24.go.kr" + iframe_src
-                return {"type": "iframe", "content": iframe_src}
+#             # iframe
+#             iframe = soup.find("iframe")
+#             if iframe and iframe.get("src"):
+#                 iframe_src = iframe["src"]
+#                 if not iframe_src.startswith("http"):
+#                     iframe_src = "https://www.work24.go.kr" + iframe_src
+#                 return {"type": "iframe", "content": iframe_src}
 
-            # 이미지
-            images = soup.find_all("img")
-            img_sources = [img["src"] for img in images if img.get("src")]
-            if img_sources:
-                return {"type": "image", "content": img_sources}
+#             # 이미지
+#             images = soup.find_all("img")
+#             img_sources = [img["src"] for img in images if img.get("src")]
+#             if img_sources:
+#                 return {"type": "image", "content": img_sources}
 
-            # 텍스트/테이블
-            text_blocks = soup.find_all(["div", "table"])
-            content_text = "\n".join(block.get_text(strip=True) for block in text_blocks if block)
-            if content_text:
-                return {"type": "text", "content": content_text[:3000]}
+#             # 텍스트/테이블
+#             text_blocks = soup.find_all(["div", "table"])
+#             content_text = "\n".join(block.get_text(strip=True) for block in text_blocks if block)
+#             if content_text:
+#                 return {"type": "text", "content": content_text[:3000]}
 
-            return {"type": "none", "content": "유효한 채용 상세 정보가 없습니다."}
+#             return {"type": "none", "content": "유효한 채용 상세 정보가 없습니다."}
 
-    except Exception as e:
-        return {
-            "type": "error",
-            "content": str(e)
-        }
+#     except Exception as e:
+#         return {
+#             "type": "error",
+#             "content": str(e)
+#         }
 
 
-@app.get("/debug/worknet/iframe")
-async def debug_worknet_iframe(iframe_url: str):
-    try:
-        async with httpx.AsyncClient(headers=HEADERS, timeout=10.0) as client:
-            response = await client.get(iframe_url)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.text, "html.parser")
 
-            preview = soup.get_text(strip=True)[:1000]
-            return {
-                "type": "preview",
-                "length": len(preview),
-                "preview": preview
-            }
-    except Exception as e:
-        return {
-            "type": "error",
-            "message": str(e)
-        }
+# 
+
+
+### gemine
+
+from fastapi import FastAPI
+from urllib.parse import urlencode
+
+app = FastAPI()
+
+BASE_WORKNET_DETAIL_URL = "https://www.work24.go.kr/empInfo/empInfoDetail.do"
+
+@app.get("/crawl_worknet_detail{emp_seq}")
+async def crawl_worknet_detail(emp_seq: str):
+    """
+    워크넷 채용 상세 공고의 직접 URL을 반환합니다.
+    사용자는 이 URL을 웹 브라우저에서 직접 열어볼 수 있습니다.
+    """
+    params = {"empSeq": emp_seq}
+    detail_url = f"{BASE_WORKNET_DETAIL_URL}?{urlencode(params)}"
+    
+    return {
+        "type": "direct_link",
+        "content": detail_url,
+        "message": "링크를 통해 워크넷에서 상세 공고를 직접 확인하세요."
+    }
+
+        
