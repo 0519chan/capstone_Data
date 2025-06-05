@@ -3,6 +3,7 @@ FROM python:3.9-slim-buster
 # 캐시 설정
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PATH="/root/.local/bin:$PATH"
 
 # 작업 디렉토리
 WORKDIR /app
