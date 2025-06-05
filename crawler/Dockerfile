@@ -10,8 +10,8 @@ WORKDIR /app
 # requirements 먼저 복사 및 설치
 COPY requirements.txt .
 
-RUN pip install --upgrade pip \
-    && pip install -r requirements.txt
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
 
 # 소스 전체 복사
 COPY . .
@@ -20,4 +20,4 @@ COPY . .
 EXPOSE 5000
 
 # 서버 실행
-CMD ["uvicorn", "app:fast_app", "--host", "0.0.0.0", "--port", "5000"]
+CMD ["python", "-m", "uvicorn", "app:fast_app", "--host", "0.0.0.0", "--port", "5000"]

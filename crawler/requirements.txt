@@ -5,6 +5,5 @@ flask
 Flask-CORS
 httpx
 fastapi
-uvicorn
-
+uvicorn[standard]
 
