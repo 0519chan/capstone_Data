@@ -1,0 +1,6 @@
+app:
+  name: capstone-data
+  port: 5000
+  root: crawler
+  build: dockerfile
+  start: uvicorn app:fast_app --host 0.0.0.0 --port 5000
