@@ -1,9 +1,0 @@
-requests
-beautifulsoup4
-urllib3
-flask
-Flask-CORS
-httpx
-fastapi
-uvicorn[standard]
-
