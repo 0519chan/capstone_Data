@@ -1,8 +1,10 @@
 FROM python:3.9-slim-buster
 
 # 캐시 설정
+# 캐시 방지 & 로그 실시간 출력
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PATH="/root/.local/bin:$PATH"
 
 # 작업 디렉토리
 WORKDIR /app
@@ -10,7 +12,7 @@ WORKDIR /app
 # requirements 먼저 복사 및 설치
 COPY requirements.txt .
 
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
 
 # 소스 전체 복사
