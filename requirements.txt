@@ -6,3 +6,4 @@ Flask-CORS
 httpx
 fastapi
 uvicorn[standard]
+app
