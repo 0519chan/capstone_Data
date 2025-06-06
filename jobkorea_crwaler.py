@@ -93,6 +93,8 @@ async def crawl_job_data_async(
             response = await client.get(url)
             print(f"[RESPONSE] Status: {response.status_code}")
             print(f"[RESPONSE] Content length: {len(response.text)}")
+            with open("jobkorea_debug.html", "w", encoding="utf-8") as f:
+             f.write(response.text)
 
             response.raise_for_status()
         except httpx.RequestError as e:
