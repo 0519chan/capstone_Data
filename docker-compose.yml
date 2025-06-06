@@ -1,6 +1,6 @@
 services:
   all_crawler:
-    build: ./crawler
+    build: .
     container_name: all_crawler
     ports:
       - "4042:5000"

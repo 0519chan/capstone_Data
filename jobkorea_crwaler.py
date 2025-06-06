@@ -23,6 +23,48 @@ HEADERS = {
     "Connection": "keep-alive"
 }
 
+# @app.get("/crawl")
+# async def crawl_job_data_async(
+#     keyword: str = Query('데이터분석', description="검색할 키워드"),
+#     page: int = Query(1, description="jobkorea 페이지 번호 (1부터 시작)"),
+#     page_size: int = Query(5, description="한 번에 몇 개 보여줄지")
+# ):
+#     now = time.time()
+#     cache_key = f"{keyword}_{page}"
+
+#     # 캐시 확인
+#     if cache_key in cache:
+#         all_data, timestamp = cache[cache_key]
+#         if now - timestamp < CACHE_DURATION:
+#             start = (page - 1) * page_size % 20
+#             end = start + page_size
+#             return all_data[start:end]
+
+#     # URL 생성
+#     encoded_keyword = urllib.parse.quote(keyword)
+#     url = f"https://www.jobkorea.co.kr/Search/?stext={encoded_keyword}&tabType=recruit&Page_No={page}"
+
+#     async with httpx.AsyncClient(timeout=10.0, headers=HEADERS) as client:
+#         try:
+#             response = await client.get(url)
+#             response.raise_for_status()
+#         except httpx.RequestError as e:
+#             return JSONResponse(content={"error": f"요청 실패: {str(e)}"}, status_code=500)
+
+#         soup = BeautifulSoup(response.text, "html.parser")
+#         jobs = soup.select('article.list-item')
+
+#         # 세마포어 설정
+#         semaphore = asyncio.Semaphore(5)
+#         tasks = [safe_process_job(client, job, semaphore) for job in jobs[:20]]
+#         all_job_list = await asyncio.gather(*tasks)
+
+#     # 캐시 저장
+#     cache[cache_key] = (all_job_list, now)
+
+#     start = (page - 1) * page_size % 20
+#     end = start + page_size
+#     return all_job_list[start:end]
 @app.get("/crawl")
 async def crawl_job_data_async(
     keyword: str = Query('데이터분석', description="검색할 키워드"),
@@ -36,6 +78,7 @@ async def crawl_job_data_async(
     if cache_key in cache:
         all_data, timestamp = cache[cache_key]
         if now - timestamp < CACHE_DURATION:
+            print(f"[CACHE HIT] {cache_key}")
             start = (page - 1) * page_size % 20
             end = start + page_size
             return all_data[start:end]
@@ -46,13 +89,20 @@ async def crawl_job_data_async(
 
     async with httpx.AsyncClient(timeout=10.0, headers=HEADERS) as client:
         try:
+            print(f"[REQUEST] URL: {url}")
             response = await client.get(url)
+            print(f"[RESPONSE] Status: {response.status_code}")
+            print(f"[RESPONSE] Content length: {len(response.text)}")
+
             response.raise_for_status()
         except httpx.RequestError as e:
+            print(f"[ERROR] 요청 실패: {e}")
             return JSONResponse(content={"error": f"요청 실패: {str(e)}"}, status_code=500)
 
         soup = BeautifulSoup(response.text, "html.parser")
         jobs = soup.select('article.list-item')
+
+        print(f"[PARSE] 잡 공고 개수: {len(jobs)}")
 
         # 세마포어 설정
         semaphore = asyncio.Semaphore(5)
@@ -131,6 +181,7 @@ async def process_single_job(client, job):
 
                 except Exception as e:
                     print(f"Error loading detail page: {e}")
+                    
 
         return {
             "company_name": company_name,
